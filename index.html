@@ -143,6 +143,7 @@
     let leases = JSON.parse(localStorage.getItem('leaseiq_demo_data') || 'null') || [...SAMPLE_LEASES];
     let currentPage = 'portfolio';
     let chartRef;
+    let portfolioChartRef;
 
     function persist() {
       localStorage.setItem('leaseiq_demo_data', JSON.stringify(leases));
@@ -184,6 +185,14 @@
     function totalAnnualCost() { return leases.reduce((sum, l) => sum + annualCost(l), 0); }
     function expiringSoon() { return leases.filter(l => l.status === 'expiring').length; }
     function avgRate() { return (leases.reduce((s, l) => s + l.rate, 0) / leases.length).toFixed(1); }
+    function highestCostLease() { return [...leases].sort((a,b) => annualCost(b) - annualCost(a))[0]; }
+    function nextExpiringLease() { return [...leases].sort((a,b) => new Date(a.expires) - new Date(b.expires))[0]; }
+    function statusCounts() {
+      return leases.reduce((acc, l) => {
+        acc[l.status] = (acc[l.status] || 0) + 1;
+        return acc;
+      }, { active: 0, expiring: 0, negotiating: 0, expired: 0 });
+    }
 
     function renderNav() {
       const navEl = document.getElementById('nav');
@@ -193,13 +202,45 @@
     }
 
     function renderPortfolio() {
+      const topLease = highestCostLease();
+      const nextLease = nextExpiringLease();
+      const counts = statusCounts();
       return `
-        <div class="alert">1 lease is approaching expiration. Review 7733 Forsyth Blvd for renewal timing.</div>
+        <div class="alert">${expiringSoon()} lease${expiringSoon() === 1 ? '' : 's'} approaching expiration. Review ${nextLease.name} for renewal timing.</div>
         <div class="grid stats">
           <div class="stat"><div class="label">Leases</div><div class="value">${leases.length}</div><div class="sub">Tracked locations</div></div>
           <div class="stat"><div class="label">Total Annual Rent</div><div class="value">${currency(totalAnnualCost())}</div><div class="sub">Across all spaces</div></div>
           <div class="stat"><div class="label">Average Rate</div><div class="value">$${avgRate()}</div><div class="sub">Per sf / year</div></div>
           <div class="stat"><div class="label">Expiring Soon</div><div class="value">${expiringSoon()}</div><div class="sub">Needs attention</div></div>
+        </div>
+        <div style="height:16px"></div>
+        <div class="grid two">
+          <div class="card">
+            <div class="label">Portfolio Dashboard</div>
+            <canvas id="portfolioChart" height="145"></canvas>
+          </div>
+          <div class="card">
+            <div class="label">Quick Insights</div>
+            <div style="display:grid;gap:12px;">
+              <div style="padding:12px;border-radius:12px;background:var(--panel2);">
+                <div style="font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;">Highest Cost Lease</div>
+                <div style="font-size:1.05rem;font-weight:800;margin-top:4px;">${topLease.name}</div>
+                <div style="margin-top:4px;color:var(--muted);">${currency(annualCost(topLease))}/yr · ${topLease.city}</div>
+              </div>
+              <div style="padding:12px;border-radius:12px;background:var(--panel2);">
+                <div style="font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;">Next Expiration</div>
+                <div style="font-size:1.05rem;font-weight:800;margin-top:4px;">${nextLease.name}</div>
+                <div style="margin-top:4px;color:var(--muted);">Expires ${nextLease.expires}</div>
+              </div>
+              <div style="padding:12px;border-radius:12px;background:var(--panel2);">
+                <div style="font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;">Lease Mix</div>
+                <div style="margin-top:6px;color:var(--muted);line-height:1.7;">
+                  Active: <strong>${counts.active}</strong> · Expiring: <strong>${counts.expiring}</strong><br>
+                  Negotiating: <strong>${counts.negotiating}</strong> · Expired: <strong>${counts.expired}</strong>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
         <div style="height:16px"></div>
         <div class="card">
@@ -304,9 +345,28 @@
       if (currentPage === 'compare') content.innerHTML = renderCompare();
       if (currentPage === 'ai') content.innerHTML = renderAI();
 
+      if (portfolioChartRef) { portfolioChartRef.destroy(); portfolioChartRef = null; }
+      if (chartRef) { chartRef.destroy(); chartRef = null; }
+
+      if (currentPage === 'portfolio') {
+        const pctx = document.getElementById('portfolioChart');
+        portfolioChartRef = new Chart(pctx, {
+          type: 'doughnut',
+          data: {
+            labels: leases.map(l => l.name),
+            datasets: [{
+              data: leases.map(l => annualCost(l)),
+              backgroundColor: ['#c4a882', '#7d6047', '#437ca8', '#c9971a', '#3f8f5d']
+            }]
+          },
+          options: {
+            plugins: { legend: { position: 'bottom' } }
+          }
+        });
+      }
+
       if (currentPage === 'reports') {
         const ctx = document.getElementById('reportChart');
-        if (chartRef) chartRef.destroy();
         chartRef = new Chart(ctx, {
           type: 'bar',
           data: {
