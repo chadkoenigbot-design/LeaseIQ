@@ -1,318 +1,331 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LeaseIQ — Intelligent Lease Management</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
-<style>
-:root{
-  --bg:#FAF7F4;--bg2:#F0EBE5;--bg3:#E8E0D8;
-  --accent:#C4A882;--accent2:#7D6047;--dark:#1C1C1C;
-  --text:#4A3528;--muted:#9E8878;--white:#FFFFFF;
-  --green:#5A9E6F;--yellow:#D4A843;--red:#C4614A;--blue:#4A7FA8;
-  --radius:12px;--shadow:0 2px 16px rgba(28,20,10,0.08);
-  --sidebar:220px;
-}
-*{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--dark);display:flex;height:100vh;overflow:hidden;}
-
-/* SIDEBAR */
-.sidebar{width:var(--sidebar);background:var(--dark);display:flex;flex-direction:column;flex-shrink:0;}
-.sidebar-logo{padding:20px 18px;border-bottom:1px solid rgba(255,255,255,0.08);}
-.sidebar-logo h1{font-size:1.1rem;font-weight:700;color:var(--white);letter-spacing:.02em;}
-.sidebar-logo span{color:var(--accent);}
-.sidebar-logo p{font-size:.68rem;color:rgba(255,255,255,0.35);margin-top:2px;letter-spacing:.04em;}
-.nav{flex:1;padding:12px 0;}
-.nav-item{display:flex;align-items:center;gap:10px;padding:10px 18px;cursor:pointer;color:rgba(255,255,255,0.5);font-size:.84rem;font-weight:500;transition:all .15s;border-left:3px solid transparent;}
-.nav-item:hover{background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.8);}
-.nav-item.active{background:rgba(196,168,130,0.12);color:var(--accent);border-left-color:var(--accent);}
-.nav-item .icon{font-size:1rem;width:20px;text-align:center;}
-.sidebar-footer{padding:14px 18px;border-top:1px solid rgba(255,255,255,0.08);}
-.sidebar-footer button{width:100%;padding:8px;background:rgba(196,168,130,0.15);border:1px solid rgba(196,168,130,0.3);color:var(--accent);border-radius:8px;cursor:pointer;font-size:.78rem;font-weight:600;font-family:inherit;}
-
-/* MAIN */
-.main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
-.topbar{background:var(--white);border-bottom:1px solid var(--bg2);padding:14px 28px;display:flex;align-items:center;gap:16px;flex-shrink:0;}
-.topbar h2{font-size:1rem;font-weight:700;color:var(--dark);flex:1;}
-.topbar-actions{display:flex;gap:10px;align-items:center;}
-.content{flex:1;overflow-y:auto;padding:24px 28px;}
-
-/* BUTTONS */
-.btn{padding:8px 16px;border-radius:8px;border:none;cursor:pointer;font-size:.82rem;font-weight:600;font-family:inherit;transition:all .15s;}
-.btn-primary{background:var(--accent);color:var(--dark);}
-.btn-primary:hover{background:var(--accent2);color:var(--white);}
-.btn-outline{background:transparent;color:var(--accent2);border:1.5px solid var(--accent);}
-.btn-outline:hover{background:var(--bg2);}
-.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--bg2);}
-.btn-danger{background:rgba(196,97,74,0.1);color:var(--red);border:1px solid rgba(196,97,74,0.3);}
-.btn-sm{padding:5px 12px;font-size:.75rem;}
-
-/* CARDS */
-.card{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px;}
-.card-title{font-size:.72rem;font-weight:700;letter-spacing:.08em;color:var(--accent);text-transform:uppercase;margin-bottom:14px;}
-.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
-.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
-.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
-
-/* STAT CARDS */
-.stat{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px 20px;}
-.stat .label{font-size:.72rem;font-weight:700;letter-spacing:.06em;color:var(--accent);text-transform:uppercase;margin-bottom:6px;}
-.stat .value{font-size:1.6rem;font-weight:700;color:var(--dark);}
-.stat .sub{font-size:.75rem;color:var(--muted);margin-top:3px;}
-
-/* ALERTS */
-.alert-bar{background:rgba(212,168,67,0.1);border:1px solid rgba(212,168,67,0.3);border-radius:10px;padding:12px 16px;margin-bottom:20px;display:flex;align-items:center;gap:10px;font-size:.83rem;color:#8B6914;}
-.alert-bar .alert-count{background:var(--yellow);color:var(--white);border-radius:20px;padding:2px 8px;font-size:.72rem;font-weight:700;}
-
-/* LEASE TABLE */
-.lease-table{width:100%;border-collapse:collapse;}
-.lease-table th{padding:10px 14px;text-align:left;font-size:.72rem;font-weight:700;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;background:var(--bg);border-bottom:2px solid var(--bg2);}
-.lease-table td{padding:10px 14px;border-bottom:1px solid var(--bg2);font-size:.84rem;color:var(--text);vertical-align:middle;}
-.lease-table tr:hover td{background:var(--bg);}
-.lease-table tr:last-child td{border-bottom:none;}
-.lease-table .name-cell{font-weight:700;color:var(--dark);}
-.lease-table .addr{font-size:.75rem;color:var(--muted);}
-.status-badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:.7rem;font-weight:700;letter-spacing:.04em;}
-.status-active{background:rgba(90,158,111,0.12);color:var(--green);}
-.status-expiring{background:rgba(212,168,67,0.15);color:#8B6914;}
-.status-negotiating{background:rgba(74,127,168,0.12);color:var(--blue);}
-.status-expired{background:rgba(196,97,74,0.1);color:var(--red);}
-
-/* MODALS */
-.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:200;align-items:flex-start;justify-content:center;padding:40px 20px;overflow-y:auto;}
-.modal-overlay.open{display:flex;}
-.modal{background:var(--white);border-radius:16px;width:720px;max-width:100%;box-shadow:0 8px 60px rgba(0,0,0,0.25);position:relative;}
-.modal-header{padding:22px 26px;border-bottom:1px solid var(--bg2);display:flex;align-items:center;justify-content:space-between;}
-.modal-header h2{font-size:1rem;font-weight:700;}
-.modal-close{background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--muted);padding:4px;}
-.modal-body{padding:24px 26px;}
-.modal-footer{padding:16px 26px;border-top:1px solid var(--bg2);display:flex;justify-content:flex-end;gap:10px;}
-
-/* FORM */
-.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
-.form-group{display:flex;flex-direction:column;gap:5px;}
-.form-group.full{grid-column:1/-1;}
-.form-group label{font-size:.73rem;font-weight:700;color:var(--accent2);letter-spacing:.04em;text-transform:uppercase;}
-.form-group input,.form-group select,.form-group textarea{padding:9px 12px;border:1.5px solid var(--bg2);border-radius:8px;font-size:.88rem;color:var(--dark);outline:none;font-family:inherit;background:var(--white);}
-.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--accent);}
-.form-group textarea{resize:vertical;min-height:80px;}
-.form-section{font-size:.72rem;font-weight:700;letter-spacing:.08em;color:var(--accent);text-transform:uppercase;padding:16px 0 10px;border-top:1px solid var(--bg2);grid-column:1/-1;margin-top:4px;}
-.form-section:first-of-type{border-top:none;padding-top:0;}
-
-/* UPLOAD */
-.upload-zone{border:2px dashed var(--accent);border-radius:10px;padding:20px;text-align:center;cursor:pointer;transition:all .2s;margin-bottom:16px;}
-.upload-zone:hover{background:rgba(196,168,130,0.06);}
-.upload-zone p{font-size:.84rem;color:var(--muted);}
-.upload-zone strong{color:var(--accent2);}
-.upload-status{padding:10px 14px;border-radius:8px;font-size:.82rem;font-weight:500;margin-bottom:14px;}
-.upload-status.extracting{background:rgba(212,168,67,0.1);color:#8B6914;}
-.upload-status.done{background:rgba(90,158,111,0.1);color:var(--green);}
-.upload-status.error{background:rgba(196,97,74,0.1);color:var(--red);}
-
-/* DETAIL VIEW */
-.detail-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:20px;}
-.detail-item{background:var(--bg);border-radius:8px;padding:12px 14px;}
-.detail-item .dl{font-size:.7rem;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;}
-.detail-item .dv{font-size:.92rem;font-weight:600;color:var(--dark);}
-.timeline{display:flex;flex-direction:column;gap:10px;}
-.timeline-item{display:flex;gap:14px;align-items:flex-start;}
-.timeline-dot{width:10px;height:10px;border-radius:50%;margin-top:5px;flex-shrink:0;}
-.timeline-dot.green{background:var(--green);}
-.timeline-dot.yellow{background:var(--yellow);}
-.timeline-dot.red{background:var(--red);}
-.timeline-dot.blue{background:var(--blue);}
-.timeline-content .tl{font-size:.78rem;font-weight:700;color:var(--dark);}
-.timeline-content .ts{font-size:.73rem;color:var(--muted);}
-
-/* REPORTS */
-.report-table{width:100%;border-collapse:collapse;}
-.report-table th{padding:10px 14px;text-align:right;font-size:.72rem;font-weight:700;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;background:var(--bg);border-bottom:2px solid var(--bg2);}
-.report-table th:first-child{text-align:left;}
-.report-table td{padding:9px 14px;border-bottom:1px solid var(--bg2);font-size:.84rem;color:var(--text);text-align:right;}
-.report-table td:first-child{text-align:left;font-weight:500;color:var(--dark);}
-.report-table .total-row td{background:var(--bg);font-weight:700;color:var(--dark);font-size:.88rem;}
-.chart-wrap{height:260px;position:relative;}
-
-/* AI CHAT */
-.chat-container{display:flex;flex-direction:column;height:calc(100vh - 140px);}
-.chat-messages{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:14px;padding-bottom:10px;}
-.chat-msg{display:flex;gap:10px;align-items:flex-start;}
-.chat-msg.user{flex-direction:row-reverse;}
-.chat-bubble{max-width:75%;padding:12px 16px;border-radius:14px;font-size:.86rem;line-height:1.5;}
-.chat-msg.assistant .chat-bubble{background:var(--white);box-shadow:var(--shadow);color:var(--dark);}
-.chat-msg.user .chat-bubble{background:var(--dark);color:var(--white);}
-.chat-avatar{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.85rem;flex-shrink:0;}
-.chat-avatar.ai{background:var(--accent);color:var(--dark);}
-.chat-avatar.user{background:var(--dark);border:2px solid var(--accent);color:var(--accent);}
-.chat-input-row{display:flex;gap:10px;padding-top:14px;border-top:1px solid var(--bg2);}
-.chat-input-row input{flex:1;padding:12px 16px;border:1.5px solid var(--bg2);border-radius:10px;font-size:.88rem;font-family:inherit;outline:none;background:var(--white);}
-.chat-input-row input:focus{border-color:var(--accent);}
-.chat-suggestions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;}
-.suggestion{padding:6px 14px;border-radius:20px;border:1px solid var(--accent);background:transparent;color:var(--accent2);font-size:.78rem;cursor:pointer;font-family:inherit;}
-.suggestion:hover{background:var(--bg2);}
-.typing{display:flex;gap:4px;align-items:center;padding:12px 16px;}
-.typing span{width:6px;height:6px;background:var(--accent);border-radius:50%;animation:bounce .8s infinite;}
-.typing span:nth-child(2){animation-delay:.15s;}
-.typing span:nth-child(3){animation-delay:.3s;}
-@keyframes bounce{0%,80%,100%{transform:translateY(0);}40%{transform:translateY(-6px);}}
-
-/* COMPARE */
-.fav-pill{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:.74rem;font-weight:600;}
-.fav-pill.fav{background:rgba(90,158,111,0.12);color:var(--green);}
-.fav-pill.neutral{background:rgba(212,168,67,0.12);color:var(--yellow);}
-.fav-pill.unfav{background:rgba(196,97,74,0.12);color:var(--red);}
-.compare-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:20px;}
-.cmetric{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px 18px;position:relative;}
-.cmetric.best{border-left:4px solid var(--green);}
-.cmetric .badge{position:absolute;top:8px;right:8px;background:var(--green);color:var(--white);font-size:.62rem;font-weight:700;padding:2px 7px;border-radius:20px;}
-.cmetric .cp{font-size:.7rem;font-weight:700;letter-spacing:.06em;color:var(--accent);text-transform:uppercase;margin-bottom:4px;}
-.cmetric .cv{font-size:1.4rem;font-weight:700;color:var(--dark);}
-.cmetric .cs{font-size:.72rem;color:var(--muted);margin-top:2px;}
-
-/* MISC */
-.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
-.section-header h3{font-size:.95rem;font-weight:700;color:var(--dark);}
-.empty-state{text-align:center;padding:60px 20px;color:var(--muted);}
-.empty-state .emoji{font-size:2.5rem;margin-bottom:10px;}
-.empty-state p{font-size:.88rem;}
-.pill{display:inline-block;padding:2px 9px;border-radius:12px;font-size:.72rem;font-weight:600;background:var(--bg2);color:var(--muted);}
-.tag{display:inline-block;padding:2px 8px;border-radius:6px;font-size:.7rem;background:rgba(196,168,130,0.15);color:var(--accent2);margin:1px;}
-.divider{height:1px;background:var(--bg2);margin:16px 0;}
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LeaseIQ — Intelligent Lease Management</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg: #f6f3ef;
+      --panel: #ffffff;
+      --panel2: #f1ebe4;
+      --text: #2a231d;
+      --muted: #7d6f63;
+      --accent: #c4a882;
+      --accent-dark: #7d6047;
+      --green: #3f8f5d;
+      --yellow: #c9971a;
+      --red: #c35b4b;
+      --blue: #437ca8;
+      --shadow: 0 10px 30px rgba(0,0,0,0.08);
+      --radius: 16px;
+      --sidebar: 230px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      min-height: 100vh;
+    }
+    .sidebar {
+      width: var(--sidebar);
+      background: #1f1b18;
+      color: white;
+      padding: 24px 0;
+      display: flex;
+      flex-direction: column;
+    }
+    .brand { padding: 0 20px 20px; border-bottom: 1px solid rgba(255,255,255,.08); }
+    .brand h1 { margin: 0; font-size: 1.4rem; }
+    .brand span { color: var(--accent); }
+    .brand p { margin: 6px 0 0; font-size: .72rem; color: rgba(255,255,255,.5); letter-spacing: .08em; }
+    .nav { padding: 18px 0; }
+    .nav button {
+      width: 100%; background: transparent; border: 0; color: rgba(255,255,255,.65);
+      text-align: left; padding: 12px 20px; font-size: .95rem; cursor: pointer;
+      border-left: 3px solid transparent;
+    }
+    .nav button.active, .nav button:hover {
+      color: white; background: rgba(196,168,130,.12); border-left-color: var(--accent);
+    }
+    .sidebar .cta { margin: auto 20px 0; padding: 10px 14px; border-radius: 10px; border: 0; background: var(--accent); color: #1f1b18; font-weight: 700; cursor: pointer; }
+    .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+    .topbar {
+      padding: 18px 24px; background: white; border-bottom: 1px solid #e7ddd3;
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    }
+    .topbar h2 { margin: 0; font-size: 1.15rem; }
+    .content { padding: 24px; overflow: auto; }
+    .grid { display: grid; gap: 16px; }
+    .grid.stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .grid.two { grid-template-columns: 1.2fr .8fr; }
+    .grid.cards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .card, .stat {
+      background: var(--panel); border-radius: var(--radius); box-shadow: var(--shadow);
+      padding: 18px;
+    }
+    .label { font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 8px; }
+    .stat .value { font-size: 1.8rem; font-weight: 800; }
+    .stat .sub { color: var(--muted); font-size: .84rem; margin-top: 4px; }
+    .alert {
+      background: #fff7df; color: #7b5b00; border: 1px solid #edd28a; padding: 12px 14px;
+      border-radius: 12px; margin-bottom: 18px; font-size: .92rem;
+    }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 12px; border-bottom: 1px solid #eee4da; text-align: left; }
+    th { font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+    .badge { display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: .74rem; font-weight: 700; }
+    .active { background: #dff3e6; color: var(--green); }
+    .expiring { background: #fff1cf; color: var(--yellow); }
+    .negotiating { background: #deecf7; color: var(--blue); }
+    .btn {
+      border: 0; border-radius: 10px; padding: 10px 14px; cursor: pointer; font-weight: 700;
+    }
+    .btn.primary { background: var(--accent); color: #1f1b18; }
+    .btn.ghost { background: var(--panel2); color: var(--accent-dark); }
+    .compare-box { border-left: 4px solid var(--green); }
+    .chat { display: flex; flex-direction: column; gap: 12px; }
+    .bubble {
+      max-width: 75%; padding: 12px 14px; border-radius: 14px; line-height: 1.45;
+      box-shadow: var(--shadow);
+    }
+    .ai { background: white; }
+    .user { background: #1f1b18; color: white; margin-left: auto; }
+    .suggestions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+    .pill { background: var(--panel2); border: 0; border-radius: 999px; padding: 8px 12px; cursor: pointer; }
+    .empty { color: var(--muted); text-align: center; padding: 36px 10px; }
+    canvas { max-width: 100%; }
+    @media (max-width: 960px) {
+      body { flex-direction: column; }
+      .sidebar { width: 100%; }
+      .grid.stats, .grid.two, .grid.cards { grid-template-columns: 1fr; }
+    }
+  </style>
 </head>
 <body>
-
-<!-- SIDEBAR -->
-<aside class="sidebar">
-  <div class="sidebar-logo">
-    <h1>Lease<span>IQ</span></h1>
-    <p>INTELLIGENT LEASE MANAGEMENT</p>
-  </div>
-  <nav class="nav">
-    <div class="nav-item active" onclick="nav('portfolio')"><span class="icon">🏢</span> Portfolio</div>
-    <div class="nav-item" onclick="nav('reports')"><span class="icon">📊</span> Reports</div>
-    <div class="nav-item" onclick="nav('compare')"><span class="icon">⚖️</span> Compare</div>
-    <div class="nav-item" onclick="nav('ai')"><span class="icon">🤖</span> AI Assistant</div>
-  </nav>
-  <div class="sidebar-footer">
-    <button onclick="openAddLease()">+ Add Lease</button>
-  </div>
-</aside>
-
-<!-- MAIN -->
-<div class="main">
-  <div class="topbar">
-    <h2 id="pageTitle">Portfolio</h2>
-    <div class="topbar-actions" id="topbarActions"></div>
-  </div>
-  <div class="content" id="content"></div>
-</div>
-
-<!-- ADD/EDIT LEASE MODAL -->
-<div class="modal-overlay" id="leaseModal">
-  <div class="modal">
-    <div class="modal-header">
-      <h2 id="modalTitle">Add Lease</h2>
-      <button class="modal-close" onclick="closeModal('leaseModal')">×</button>
+  <aside class="sidebar">
+    <div class="brand">
+      <h1>Lease<span>IQ</span></h1>
+      <p>INTELLIGENT LEASE MANAGEMENT</p>
     </div>
-    <div class="modal-body">
-      <!-- Upload Zone -->
-      <div class="upload-zone" onclick="document.getElementById('abstractFile').click()" id="uploadZone">
-        <p>🤖 <strong>AI Abstraction</strong> — Drop a PDF or Word lease doc to auto-fill all fields</p>
-        <p style="margin-top:4px;font-size:.75rem;">Click to browse · PDF or .docx</p>
-        <input type="file" id="abstractFile" style="display:none" accept=".pdf,.docx,.doc" onchange="handleAbstract(this)">
+    <div class="nav" id="nav"></div>
+    <button class="cta" onclick="addLease()">+ Add Lease</button>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <h2 id="pageTitle">Portfolio</h2>
+      <div>
+        <button class="btn ghost" onclick="resetDemo()">Reset Demo Data</button>
       </div>
-      <div id="abstractStatus" style="display:none"></div>
-      <div class="form-grid" id="leaseForm"></div>
     </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeModal('leaseModal')">Cancel</button>
-      <button class="btn btn-primary" onclick="saveLease()">Save Lease</button>
-    </div>
-  </div>
-</div>
+    <div class="content" id="content"></div>
+  </main>
 
-<!-- LEASE DETAIL MODAL -->
-<div class="modal-overlay" id="detailModal">
-  <div class="modal" style="width:800px">
-    <div class="modal-header">
-      <h2 id="detailTitle">Lease Detail</h2>
-      <button class="modal-close" onclick="closeModal('detailModal')">×</button>
-    </div>
-    <div class="modal-body" id="detailBody"></div>
-    <div class="modal-footer">
-      <button class="btn btn-danger btn-sm" onclick="deleteCurrentLease()">Delete</button>
-      <button class="btn btn-ghost" onclick="closeModal('detailModal')">Close</button>
-      <button class="btn btn-primary" onclick="editCurrentLease()">Edit Lease</button>
-    </div>
-  </div>
-</div>
+  <script>
+    const NAV_ITEMS = [
+      { key: 'portfolio', label: '🏢 Portfolio' },
+      { key: 'reports', label: '📊 Reports' },
+      { key: 'compare', label: '⚖️ Compare' },
+      { key: 'ai', label: '🤖 AI Assistant' }
+    ];
 
-<script>
-pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    const SAMPLE_LEASES = [
+      { id:'l1', name:'1818 Olive Street', city:'St. Louis', sqft:2200, rate:22, type:'NNN', status:'active', expires:'2029-02-28', landlord:'Cortex STL Properties', note:'Strong location with predictable operating expenses.' },
+      { id:'l2', name:'7733 Forsyth Blvd', city:'Clayton', sqft:1800, rate:28, type:'Gross', status:'expiring', expires:'2026-02-28', landlord:'Clayton Office Partners', note:'Should begin renewal conversations soon.' },
+      { id:'l3', name:'3200 Maplewood Ave', city:'Maplewood', sqft:2000, rate:18, type:'Modified Gross', status:'negotiating', expires:'2028-05-31', landlord:'Maplewood Creative LLC', note:'Best value in portfolio and strong expansion candidate.' }
+    ];
 
-// ── CONSTANTS ─────────────────────────────────────────────────────────────────
-const INJECTED_KEY = 'OPENAI_KEY_PLACEHOLDER';
-const getKey = () => localStorage.getItem('oai_key') || '';
-if (INJECTED_KEY && INJECTED_KEY !== 'OPENAI_KEY_PLACEHOLDER' && !getKey()) localStorage.setItem('oai_key', INJECTED_KEY);
+    let leases = JSON.parse(localStorage.getItem('leaseiq_demo_data') || 'null') || [...SAMPLE_LEASES];
+    let currentPage = 'portfolio';
+    let chartRef;
 
-// ── DATA MODEL ────────────────────────────────────────────────────────────────
-const FORM_FIELDS = [
-  {section:'Property'},
-  {key:'name',label:'Property Name',type:'text',placeholder:'1818 Olive Street'},
-  {key:'address',label:'Address',type:'text',placeholder:'1818 Olive Street, Suite 400, St. Louis, MO'},
-  {key:'suite',label:'Suite / Floor',type:'text',placeholder:'Suite 400'},
-  {key:'status',label:'Status',type:'select',options:['active','expiring','negotiating','expired']},
-  {section:'Space & Financials'},
-  {key:'sqft',label:'Square Footage (sf)',type:'number',placeholder:'2200'},
-  {key:'baseRent',label:'Base Rent ($/sf/yr)',type:'number',placeholder:'22.00'},
-  {key:'leaseType',label:'Lease Type',type:'select',options:['NNN','Gross','Modified Gross']},
-  {key:'opex',label:'Operating Expenses ($/sf/yr)',type:'number',placeholder:'8.00'},
-  {key:'escalation',label:'Annual Escalation (%)',type:'number',placeholder:'3'},
-  {section:'Clauses & Responsibilities'},
-  {key:'tenantClauses',label:'Tenant Responsibilities',type:'textarea',placeholder:'List tenant responsibilities...'},
-  {key:'landlordClauses',label:'Landlord Responsibilities',type:'textarea',placeholder:'List landlord responsibilities...'},
-  {key:'renewalOptions',label:'Renewal Options',type:'text',placeholder:'2 x 5yr at FMV'},
-  {key:'terminationOption',label:'Termination Option',type:'text',placeholder:'Month 36 with 6mo notice'},
-  {section:'Notes'},
-  {key:'notes',label:'Notes',type:'textarea',placeholder:'Key clauses, negotiation history, special conditions...'},
-  {section:'Rent Reconciliation'},
-  {key:'rentPaid',label:'Rent Paid (Total)',type:'number',placeholder:'120000'},
-  {key:'opexPaid',label:'Opex Paid (Total)',type:'number',placeholder:'30000'},
-  {key:'rentDue',label:'Total Rent Due',type:'number',placeholder:'150000'},
-  {key:'reconciliationNotes',label:'Notes',type:'textarea',placeholder:'Notes on rent reconciliation...'},
-];
+    function persist() {
+      localStorage.setItem('leaseiq_demo_data', JSON.stringify(leases));
+    }
 
-// ── SAMPLE DATA ───────────────────────────────────────────────────────────────
-const SAMPLE_LEASES = [
-  {id:'l1',name:'1818 Olive Street',address:'1818 Olive Street, Suite 400, St. Louis, MO 63103',suite:'Suite 400',status:'active',sqft:2200,baseRent:22,leaseType:'NNN',opex:8,escalation:3,commencementDate:'2024-03-01',expirationDate:'2029-02-28',term:60,freeRent:2,ti:35,deposit:2,parkingSpaces:3,parking:150,renewalOptions:'1 x 5yr at FMV',terminationOption:'Month 48 with 9mo notice + penalty',landlordName:'Cortex STL Properties LLC',landlordContact:'David Park · 314-555-0192',propertyManager:'CBRE · Sarah Johnson · 314-555-8801',tenantRep:'Cushman & Wakefield · Mike Torres',notes:'Strong location, NNN but predictable. Renewal option must be exercised by Dec 2028.'},
-  {id:'l2',name:'7733 Forsyth Blvd',address:'7733 Forsyth Boulevard, Suite 200, Clayton, MO 63105',suite:'Suite 200',status:'expiring',sqft:1800,baseRent:28,leaseType:'Gross',opex:0,escalation:2.5,commencementDate:'2023-03-01',expirationDate:'2026-02-28',term:36,freeRent:1,ti:50,deposit:1,parkingSpaces:2,parking:0,renewalOptions:'None negotiated',terminationOption:'None',landlordName:'Clayton Office Partners',landlordContact:'Amy Chen · 314-555-3344',propertyManager:'Colliers · Tom Riley',tenantRep:'JLL · Rachel Moss',notes:'Lease expiring Feb 2026. Begin renewal/relocation discussions no later than Aug 2025. Landlord likely to push rate to $31+.'},
-  {id:'l3',name:'3200 Maplewood Ave',address:'3200 Maplewood Avenue, Suite 101, Maplewood, MO 63143',suite:'Suite 101',status:'active',sqft:2000,baseRent:18,leaseType:'Modified Gross',opex:4,escalation:2,commencementDate:'2024-06-01',expirationDate:'2028-05-31',term:48,freeRent:3,ti:40,deposit:2,parkingSpaces:2,parking:75,renewalOptions:'1 x 3yr at market',terminationOption:'None',landlordName:'Maplewood Creative LLC',landlordContact:'Bob Hernandez · 314-555-7712',propertyManager:'Self-managed',tenantRep:'Marcus & Millichap · James Lee',notes:'Best value in portfolio. Landlord very flexible. Good candidate for expansion if adjacent suite opens.'},
-];
+    function resetDemo() {
+      leases = [...SAMPLE_LEASES];
+      persist();
+      render();
+    }
 
-// ── STATE ─────────────────────────────────────────────────────────────────────
-let leases = JSON.parse(localStorage.getItem('leaseiq_leases') || JSON.stringify(SAMPLE_LEASES));
-let currentEditId = null;
-let currentDetailId = null;
-let chatHistory = [];
-let comparePerspective = 'tenant';
-let compareChart = null;
-let reportChart = null;
+    function addLease() {
+      const name = prompt('Property name?');
+      if (!name) return;
+      leases.push({
+        id: 'l' + Date.now(),
+        name,
+        city: prompt('City?', 'St. Louis') || 'St. Louis',
+        sqft: Number(prompt('Square feet?', '1500') || 1500),
+        rate: Number(prompt('Base rent ($/sf/yr)?', '24') || 24),
+        type: prompt('Lease type?', 'NNN') || 'NNN',
+        status: 'active',
+        expires: prompt('Expiration date?', '2028-12-31') || '2028-12-31',
+        landlord: prompt('Landlord?', 'Unknown') || 'Unknown',
+        note: prompt('Quick note?', 'Added from demo UI') || 'Added from demo UI'
+      });
+      persist();
+      currentPage = 'portfolio';
+      render();
+    }
 
-function save() { localStorage.setItem('leaseiq_leases', JSON.stringify(leases)); }
-function uid() { return 'l' + Date.now() + Math.random().toString(36).substr(2,5); }
+    function nav(page) {
+      currentPage = page;
+      render();
+    }
 
-// ── NAVIGATION ────────────────────────────────────────────────────────────────
-let currentPage = 'portfolio';
-function nav(page) {
-  currentPage = page;
-  document.querySelectorAll('.nav-item').forEach((el,i) => {
-    el.classList.toggle('active', ['portfolio','reports','compare','ai'].indexOf(page) === i);
-  });
-  const titles = {portfolio:'Portfolio',reports:'Reports',compare:'Lease Comparator',ai:'AI Assistant'};
-  document.getElementById('pageTitle').textContent = titles[page];
-  const actions = {
-    portfolio:`<button class=
+    function currency(n) { return '$' + n.toLocaleString(); }
+    function annualCost(l) { return Math.round(l.sqft * l.rate); }
+    function totalAnnualCost() { return leases.reduce((sum, l) => sum + annualCost(l), 0); }
+    function expiringSoon() { return leases.filter(l => l.status === 'expiring').length; }
+    function avgRate() { return (leases.reduce((s, l) => s + l.rate, 0) / leases.length).toFixed(1); }
+
+    function renderNav() {
+      const navEl = document.getElementById('nav');
+      navEl.innerHTML = NAV_ITEMS.map(item =>
+        `<button class="${item.key === currentPage ? 'active' : ''}" onclick="nav('${item.key}')">${item.label}</button>`
+      ).join('');
+    }
+
+    function renderPortfolio() {
+      return `
+        <div class="alert">1 lease is approaching expiration. Review 7733 Forsyth Blvd for renewal timing.</div>
+        <div class="grid stats">
+          <div class="stat"><div class="label">Leases</div><div class="value">${leases.length}</div><div class="sub">Tracked locations</div></div>
+          <div class="stat"><div class="label">Total Annual Rent</div><div class="value">${currency(totalAnnualCost())}</div><div class="sub">Across all spaces</div></div>
+          <div class="stat"><div class="label">Average Rate</div><div class="value">$${avgRate()}</div><div class="sub">Per sf / year</div></div>
+          <div class="stat"><div class="label">Expiring Soon</div><div class="value">${expiringSoon()}</div><div class="sub">Needs attention</div></div>
+        </div>
+        <div style="height:16px"></div>
+        <div class="card">
+          <div class="label">Portfolio Overview</div>
+          <table>
+            <thead>
+              <tr><th>Property</th><th>City</th><th>Sq Ft</th><th>Rate</th><th>Type</th><th>Status</th><th>Expires</th></tr>
+            </thead>
+            <tbody>
+              ${leases.map(l => `
+                <tr>
+                  <td><strong>${l.name}</strong><br><span style="color:var(--muted);font-size:.84rem">${l.landlord}</span></td>
+                  <td>${l.city}</td>
+                  <td>${l.sqft.toLocaleString()}</td>
+                  <td>$${l.rate}/sf</td>
+                  <td>${l.type}</td>
+                  <td><span class="badge ${l.status}">${l.status}</span></td>
+                  <td>${l.expires}</td>
+                </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+        <div style="height:16px"></div>
+        <div class="grid cards">
+          ${leases.map(l => `
+            <div class="card">
+              <div class="label">${l.name}</div>
+              <div style="font-size:1.15rem;font-weight:800">${currency(annualCost(l))}/yr</div>
+              <div style="margin-top:8px;color:var(--muted)">${l.note}</div>
+            </div>`).join('')}
+        </div>
+      `;
+    }
+
+    function renderReports() {
+      return `
+        <div class="grid two">
+          <div class="card">
+            <div class="label">Annual Cost by Property</div>
+            <canvas id="reportChart" height="150"></canvas>
+          </div>
+          <div class="card">
+            <div class="label">Key Findings</div>
+            <ul style="padding-left:18px;line-height:1.7">
+              <li>3200 Maplewood Ave is the lowest-cost option per square foot.</li>
+              <li>7733 Forsyth Blvd carries the highest annual rate and is expiring soon.</li>
+              <li>Portfolio annual rent is ${currency(totalAnnualCost())} based on current sample data.</li>
+              <li>Consider renewal negotiation timing for expiring locations.</li>
+            </ul>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderCompare() {
+      const sorted = [...leases].sort((a,b) => annualCost(a) - annualCost(b));
+      return `
+        <div class="grid cards">
+          ${sorted.map((l, i) => `
+            <div class="card compare-box">
+              <div class="label">${i === 0 ? 'Best value' : 'Comparison'}</div>
+              <div style="font-size:1.2rem;font-weight:800">${l.name}</div>
+              <div style="margin-top:8px">${l.sqft.toLocaleString()} sf · $${l.rate}/sf · ${l.type}</div>
+              <div style="margin-top:8px;color:var(--muted)">Annual Cost: ${currency(annualCost(l))}</div>
+              <div style="margin-top:8px"><span class="badge ${l.status}">${l.status}</span></div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+
+    function renderAI() {
+      return `
+        <div class="card">
+          <div class="label">AI Assistant</div>
+          <div class="chat">
+            <div class="bubble ai">Your portfolio currently includes ${leases.length} leases. The highest-rate lease is 7733 Forsyth Blvd, and the best value is 3200 Maplewood Ave.</div>
+            <div class="bubble user">Which lease should I renegotiate first?</div>
+            <div class="bubble ai">Start with 7733 Forsyth Blvd. It has the highest rate and is the nearest expiration risk in the sample portfolio.</div>
+          </div>
+          <div class="suggestions">
+            <button class="pill" onclick="alert('Demo answer: 7733 Forsyth Blvd is the most urgent renewal candidate.')">Which lease is riskiest?</button>
+            <button class="pill" onclick="alert('Demo answer: 3200 Maplewood Ave has the lowest annual cost in the sample set.')">Show cheapest lease</button>
+            <button class="pill" onclick="alert('Demo answer: Total annual rent is ' + '${currency(totalAnnualCost())}'.replace(/\$\{currency\(totalAnnualCost\(\)\)\}/, ''))">Summarize costs</button>
+          </div>
+        </div>
+      `;
+    }
+
+    function render() {
+      renderNav();
+      document.getElementById('pageTitle').textContent = {
+        portfolio: 'Portfolio',
+        reports: 'Reports',
+        compare: 'Lease Comparator',
+        ai: 'AI Assistant'
+      }[currentPage];
+
+      const content = document.getElementById('content');
+      if (currentPage === 'portfolio') content.innerHTML = renderPortfolio();
+      if (currentPage === 'reports') content.innerHTML = renderReports();
+      if (currentPage === 'compare') content.innerHTML = renderCompare();
+      if (currentPage === 'ai') content.innerHTML = renderAI();
+
+      if (currentPage === 'reports') {
+        const ctx = document.getElementById('reportChart');
+        if (chartRef) chartRef.destroy();
+        chartRef = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: leases.map(l => l.name),
+            datasets: [{
+              label: 'Annual Cost',
+              data: leases.map(l => annualCost(l)),
+              backgroundColor: ['#c4a882','#7d6047','#437ca8']
+            }]
+          },
+          options: {
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true } }
+          }
+        });
+      }
+    }
+
+    render();
+  </script>
+</body>
+</html>
